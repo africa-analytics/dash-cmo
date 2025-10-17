@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Estratégico | Natura & Avon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            max-height: 400px;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .kpi-card, .campaign-card {
+            transition: all 0.2s ease;
+        }
+        .kpi-card:hover, .campaign-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .brand-selector {
+            padding-bottom: 8px;
+            border-bottom: 4px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .brand-selector img {
+            transition: all 0.3s ease;
+        }
+        .brand-selector.selected img {
+            transform: scale(1.05);
+            opacity: 1;
+            filter: none;
+        }
+        .brand-selector:not(.selected) img {
+            transform: scale(0.95);
+            opacity: 0.5;
+            filter: grayscale(100%);
+        }
+        .quarter-highlight {
+            border: 2px solid;
+            transform: scale(1.05);
+        }
+        #prev-month-btn:disabled, #next-month-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="text-gray-700">
+
+    <header class="bg-white/95 backdrop-blur-lg sticky top-0 z-50 shadow-md border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-2">
+                <h1 class="text-2xl font-bold text-gray-800">Dashboard Executivo</h1>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-500 hidden md:block">Selecione a marca</span>
+                    <div class="flex items-end space-x-6">
+                        <div id="natura-btn" class="brand-selector selected">
+                            <img src="https://images.seeklogo.com/logo-png/45/2/natura-logo-png_seeklogo-451985.png" alt="Natura Logo" class="h-10">
+                        </div>
+                        <div id="avon-btn" class="brand-selector">
+                            <img src="https://images.seeklogo.com/logo-png/39/2/avon-new-2021-logo-png_seeklogo-397345.png" alt="Avon Logo" class="h-8">
+                        </div>
+                    </div>
+                </div>
+                <div class="w-48 hidden lg:block"></div> </div>
+             <div id="tabs" class="flex flex-col sm:flex-row justify-center border-t border-gray-200">
+                <button data-tab="tab1" class="tab-button text-gray-500 font-semibold py-3 px-6 border-b-2">Sumário Estratégico</button>
+                <button data-tab="tab2" class="tab-button text-gray-500 font-semibold py-3 px-6 border-b-2">Operação de Mídia</button>
+                <button data-tab="tab3" class="tab-button text-gray-500 font-semibold py-3 px-6 border-b-2">Performance de Mercado</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <div id="tab-content">
+            <div id="tab1" class="tab-pane">
+                <p id="summary-desc" class="text-center text-gray-600 mb-8 max-w-3xl mx-auto"></p>
+                <div id="kpi-cards-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                    <div id="summary-highlights-container" class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Evolução da Receita</h3>
+                        <p class="text-sm text-gray-600 mb-4">Tendência dos últimos 12 meses.</p>
+                        <div class="chart-container h-48"><canvas id="revenueTrendChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab2" class="tab-pane hidden">
+                <div class="flex items-center justify-center mb-6">
+                    <button id="prev-month-btn" class="p-2 rounded-full hover:bg-gray-200 transition-colors"><i class="fas fa-chevron-left fa-fw"></i></button>
+                    <span id="current-month-display" class="w-48 text-center font-bold text-xl text-gray-700"></span>
+                    <button id="next-month-btn" class="p-2 rounded-full hover:bg-gray-200 transition-colors"><i class="fas fa-chevron-right fa-fw"></i></button>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                     <h3 class="text-xl font-bold text-gray-800">Acompanhamento de Investimento</h3>
+                     <p id="investment-highlight" class="text-gray-600 mb-6"></p>
+                    <div id="investment-container" class="space-y-4"></div>
+                </div>
+                <div id="precision-overview-container" class="bg-white p-6 rounded-lg shadow-md mb-8"></div>
+                 <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 id="campaign-title" class="text-xl font-bold text-gray-800 mb-2"></h3>
+                    <div id="campaigns-brasil"></div>
+                     <div id="campaigns-hispana" class="mt-8"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Retorno sobre Investimento (MMM ROAS)</h3>
+                        <div class="chart-container"><canvas id="mmmRoasChart"></canvas></div>
+                    </div>
+                    <div id="governance-card" class="bg-white p-6 rounded-lg shadow-md"></div>
+                </div>
+            </div>
+
+            <div id="tab3" class="tab-pane hidden">
+                <p id="market-intro" class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">Avaliação trimestral dos 5 principais indicadores de desempenho. Clique em um card para ver a análise completa.</p>
+                <div id="market-grid-view" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
+                        <div class="flex justify-between items-start"><h3 id="soi-title" class="text-xl font-bold text-gray-800"></h3><span id="soi-source" class="text-xs font-semibold bg-gray-100 text-gray-600 px-2 py-1 rounded-full"></span></div>
+                        <p id="soi-desc" class="text-sm text-gray-600 mt-2 mb-4"></p>
+                        <div class="flex-grow chart-container h-[280px]"><div id="soi-summary-chart" class="w-full h-full"></div></div>
+                        <button onclick="showMetricDetail('soi')" class="mt-4 w-full text-center font-semibold py-2 rounded-lg dynamic-bg-hover">Ver Análise Completa</button>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
+                        <div class="flex justify-between items-start"><h3 id="roas-title" class="text-xl font-bold text-gray-800"></h3><span id="roas-source" class="text-xs font-semibold bg-gray-100 text-gray-600 px-2 py-1 rounded-full"></span></div>
+                        <p id="roas-desc" class="text-sm text-gray-600 mt-2 mb-4"></p>
+                        <div class="flex-grow chart-container h-[280px]"><canvas id="roas-summary-chart"></canvas></div>
+                        <button onclick="showMetricDetail('roas')" class="mt-4 w-full text-center font-semibold py-2 rounded-lg dynamic-bg-hover">Ver Análise Completa</button>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
+                        <div class="flex justify-between items-start"><h3 id="marketShare-title" class="text-xl font-bold text-gray-800"></h3><span id="marketShare-source" class="text-xs font-semibold bg-gray-100 text-gray-600 px-2 py-1 rounded-full"></span></div>
+                        <p id="marketShare-desc" class="text-sm text-gray-600 mt-2 mb-4"></p>
+                        <div class="flex-grow chart-container h-[280px]"><canvas id="marketShare-summary-chart"></canvas></div>
+                        <button onclick="showMetricDetail('marketShare')" class="mt-4 w-full text-center font-semibold py-2 rounded-lg dynamic-bg-hover">Ver Análise Completa</button>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
+                        <div class="flex justify-between items-start"><h3 id="equity-title" class="text-xl font-bold text-gray-800"></h3><span id="equity-source" class="text-xs font-semibold bg-gray-100 text-gray-600 px-2 py-1 rounded-full"></span></div>
+                        <p id="equity-desc" class="text-sm text-gray-600 mt-2 mb-4"></p>
+                        <div class="flex-grow chart-container h-[280px]"><canvas id="equity-summary-chart"></canvas></div>
+                        <button onclick="showMetricDetail('equity')" class="mt-4 w-full text-center font-semibold py-2 rounded-lg dynamic-bg-hover">Ver Análise Completa</button>
+                    </div>
+                </div>
+                <div id="market-detail-view" class="hidden"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- DATA STORE ---
+        const dashboardData = {
+            natura: {
+                brandColor: '#F47920',
+                summaryDesc: 'Diagnóstico da saúde do negócio Natura, combinando performance operacional com impacto nos resultados de mercado.',
+                kpiCards: [
+                    { title: 'Receita Líquida', value: 'R$ 5,7 BI', change: "-1,7%", changeColor: 'text-red-500', frequency: 'Trimestral', history: [{period: 'Q4 24', value: '6.5 BI'}, {period: 'Q1 25', value: '5.8 BI'}] },
+                    { title: 'Market Share', value: '17,9%', change: "-0,2 p.p.", changeColor: 'text-red-500', frequency: 'Trimestral', history: [{period: 'H2 24', value: '17.8%'}, {period: 'H1 25', value: '18.1%'}] },
+                    { title: 'Share of Investment', value: '6,6%', change: "-0,2 p.p.", changeColor: 'text-red-500', frequency: 'Mensal', history: [{period: 'Mai', value: '7.7%'}, {period: 'Jun', value: '8.5%'}, {period: 'Jul', value: '9.1%'}] },
+                    { title: 'Purchase Intent', value: '44,5%', change: "+1,4 p.p.", changeColor: 'text-green-500', frequency: 'Mensal', history: [{period: 'Mai', value: '43.1%'}, {period: 'Jun', value: '43.8%'}, {period: 'Jul', value: '44.5%'}] }
+                ],
+                summaryHighlights: [
+                    { title: 'Balanço Q2 2025', icon: 'fa-building', summary: 'Natura reverte prejuízo com lucro sólido, sustenta EBITDA, mas receita recua; foco estratégico na venda da Avon International.', metrics: [ { label: 'Lucro', value: 'R$ 195 MM (+1,0 BI)', type: 'positive' }, { label: 'EBITDA', value: 'R$ 796 MM (+4,5% Q2.24)', type: 'positive' }, { label: 'Receita', value: 'R$ 5,7 BI (-1,7% Q2 24)', type: 'negative' }] },
+                    { title: 'YouGov Brand Index', icon: 'fa-star', summary: 'Marca teve um impacto de lembrança e intenção mais sólido, mas viu índices de marca e produto caírem no período.', metrics: [ { label: 'Purchase Intent', value: '44,5% (+1,4 p.p)', type: 'positive' }, { label: 'Ad Awareness', value: '20,4% (+0,8 p.p)', type: 'positive' }, { label: 'Percepção Valor', value: '47,8% (-1,8 p.p)', type: 'negative' }, { label: 'Qualidade', value: '64,0% (-2,5 p.p)', type: 'negative' }] }
+                ],
+                revenueTrend: { labels: ['Ago', 'Set', 'Out', 'Nov', 'Dez', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul'], data: [5.5, 5.6, 5.8, 6.2, 6.5, 5.9, 5.7, 5.8, 5.6, 5.5, 5.4, 5.7] },
+                monthlyData: [
+                    { month: 'Maio', investment: { highlight: 'Mês de preparação para Dia das Mães, com investimento focado em perfumaria.', brasil: { total: 'R$ 420.1 MM', percentage: '40,1 %', progress: '40.1%', balance: 'R$ 626.3 MM' }, hispana: { total: 'R$ xx MM', percentage: 'X,X %', progress: '30%', balance: 'R$ X.X MM' } }, precisionOverview: { totalInvest: 'R$ 150,2 MM', onlinePercent: '55%', onlineValue: 'R$ 82,6 MM', offlinePercent: '45%', offlineValue: 'R$ 67,6 MM', pmPercent: '65%', pmValue: 'R$ 53,7 MM', nonPmValue: 'R$ 28,9 MM', insight: 'Concentração de investimento em canais de performance para a data comemorativa.'}, campaigns: { brasil: [{ name: 'Dia das Mães', desc: 'Principal campanha do mês, com forte presença em TV e digital.', kpiValue: '4.5', kpiLabel: 'ROAS' }], hispana: []}, mmmRoas: { data: [2.8, 4.5, 1.9, 3.6] }, governance: { goldenRules: 85, score: 3.1 } },
+                    { month: 'Junho', investment: { highlight: 'Investimento regular pós-sazonalidade, com foco em continuidade.', brasil: { total: 'R$ 474.7 MM', percentage: '45,2 %', progress: '45.2%', balance: 'R$ 571.7 MM' }, hispana: { total: 'R$ xx MM', percentage: 'X,X %', progress: '30%', balance: 'R$ X.X MM' }}, precisionOverview: { totalInvest: 'R$ 162,5 MM', onlinePercent: '56%', onlineValue: 'R$ 91,0 MM', offlinePercent: '44%', offlineValue: 'R$ 71,5 MM', pmPercent: '68%', pmValue: 'R$ 61,9 MM', nonPmValue: 'R$ 29,1 MM', insight: 'Manutenção da estratégia de PM com otimizações de audiência.'}, campaigns: { brasil: [{ name: 'Ekos [Sustentabilidade]', desc: 'Campanha institucional com foco em brand equity e engajamento.', kpiValue: '3.45', kpiLabel: 'Score' }], hispana: []}, mmmRoas: { data: [2.6, 4.3, 1.8, 3.5] }, governance: { goldenRules: 87, score: 3.2 } },
+                    { month: 'Julho', investment: { highlight: 'Julho acelerou o consumo de deals, com 50.7 milhões, sendo o maior mês até aqui.', brasil: { total: 'R$ 525.4 MM', percentage: '52,8 %', progress: '52.8%', balance: 'R$ 247.4 MM' }, hispana: { total: 'R$ xx MM', percentage: 'X,X %', progress: '30%', balance: 'R$ X.X MM' }}, precisionOverview: { totalInvest: 'R$ 177,2 milhões', onlinePercent: '57%', onlineValue: 'R$ 100,9 MM', offlinePercent: '43%', offlineValue: 'R$ 75,4 MM', pmPercent: '69%', pmValue: 'R$ 69,9 MM', nonPmValue: 'R$ 31,0 MM', insight: 'Seguimos em linha com a recomendação de share em PM, próximo aos 70%.'}, campaigns: { brasil: [ { name: 'WSL [Institucional/Perfume]', desc: 'Sinergia com Kaiak no território Surf teve o maior score de Julho.', kpiValue: '3.55', kpiLabel: 'Score' }, { name: 'Una Celebra [Make]', desc: 'Campanha digital com maior concentração de esforços em formatos otimizáveis.', kpiValue: '95.5%', kpiLabel: 'Precision' }, { name: 'Parintins [Institucional]', desc: 'Líder de engajamento segundo a Winnin.', kpiValue: '49.1%', kpiLabel: 'Share' } ], hispana: [ { name: 'Chronos [LATAM]', desc: 'Destaque em conversão com audiências de alta afinidade.', kpiValue: 'XX.X', kpiLabel: 'KPI' } ]}, mmmRoas: { data: [2.5, 4.2, 1.8, 3.5] }, governance: { goldenRules: 88, score: 3.28, rentabilityValue: 'R$ 2,4 MM', rentabilityPercent: '17,2% do investimento' } }
+                ],
+                marketPerformance: {
+                    soi: { key: 'soi', title: 'Share of Investment vs. Voice', source: 'KANTAR IBOPE MEDIA', description: 'Análise da pressão competitiva e eficiência do investimento (investimento vs. GRP).', chartData: { labels: ['Q1','Q2','Q3 (Jul)'], data: [4.7, 7.7, 9.1]}, mainValue: '6.6%', mainLabel: 'YTD', mainChange: '-0.2 p.p vs 24', quarterly: [ { quarter: 'Q1', value: '4.7%', change: '-2.0 p.p', insight: 'Início de ano de menor movimento, com crescimento de concorrentes.' }, { quarter: 'Q2', value: '7.7%', change: '+1.7 p.p', insight: 'Crescimento em participação devido a desaceleração de Nivea, Dove & P&G.' }, { quarter: 'Q3 (Jul)', value: '9.1%', change: '+0.1 p.p', insight: 'Maior SOI do ano, liderado pela presença combinada de frentes.', isCurrent: true } ], pillars: [ { name: 'Perfume', value: '21.8%', change: '+4.1 p.p', subtext: 'SOI YTD 21.1%' }, { name: 'Corpo', value: '15.5%', change: '+15.3 p.p', subtext: 'SOI YTD 22.6%' }, { name: 'Cabelo', value: '2.1%', change: '-6.5 p.p', subtext: 'SOI YTD 0.4%' } ], highlight: { title: 'Natura Homem Evolut foi a 10ª marca em investimento no mês.', details: 'Comparada à 31ª posição de Homem Nós em Julho 2024.' }, analysis: { reaction: 'Natura manteve share sob deflação de mercado. Tanto Natura quanto o mercado CFT retraíram cerca de 20% comparado a Julho do último ano.', lookout: 'Destaque competitivo para Boticário, com forte equilíbrio entre as frentes de Perfume e Linha de produtos para o Dia dos Pais.' }, soiSov: { x: [18], y: [21] } },
+                    roas: { key: 'roas', title: 'ROAS', source: 'MEDIA HERO', description: 'Quanto os esforços de mídia estão retornando em vendas.', chartData: { labels: ['Q1','Q2'], data: [3.5, 4.1]}, mainValue: '3.8', mainLabel: 'H1', mainChange: '+0.2 vs H1 24', quarterly: [ { quarter: 'Q1', value: '3.5', change: '+0.1', insight: 'Período com menor investimento e retorno estável.' }, { quarter: 'Q2', value: '4.1', change: '+0.3', insight: 'Sazonalidade de Dia das Mães impulsionou o retorno.' }, { quarter: 'Q3', value: 'N/A', change: '', insight: 'Dados em processamento pelo MMM.', isCurrent: true } ], pillars: [ { name: 'Mídia Digital', value: '4.2', change: '', subtext: 'Principal driver' }, { name: 'TV Aberta', value: '2.5', change: '', subtext: 'Alcance e branding' }, { name: 'OOH', value: '1.8', change: '', subtext: 'Contexto e local' } ], highlight: { title: 'Mídia Digital apresenta o maior retorno sobre o investimento.', details: 'Estratégias de performance e funil de conversão são chave.' }, analysis: { reaction: 'O retorno geral está crescendo, indicando uma alocação de mídia mais eficiente trimestre a trimestre.', lookout: 'O desafio é aumentar a eficiência dos canais de topo de funil (TV e OOH) para se aproximarem do retorno digital.' } },
+                    marketShare: { key: 'marketShare', title: 'Market Share', source: 'KANTAR WORLDPANEL', description: 'Nossa captação de vendas em valor dentro do mercado total de CFT.', chartData: { labels: ['H1 2024', 'H1 2025'], data: [18.1, 17.9]}, mainValue: '17.9%', mainLabel: 'H1', mainChange: '-0.2% pp vs H1 24', quarterly: [ { quarter: 'Q1', value: '18.1%', change: '+1.1 pp', insight: 'Início de ano forte com ganho de share sobre a concorrência.' }, { quarter: 'Q2', value: '17.9%', change: '-1.3 pp', insight: 'Maior retração absoluta, seguida por Boticário. Eudora e L\'Oréal cresceram.' }, { quarter: 'Q3', value: 'N/A', change: '', insight: 'Aguardando fechamento do trimestre.', isCurrent: true } ], pillars: [ { name: 'Perfume', value: '40.7%', change: '-0.6 pp', subtext: '' }, { name: 'Corpo', value: '33.0%', change: '+0.2 pp', subtext: '' }, { name: 'Cabelo', value: '2.6%', change: '-0.3 pp', subtext: '' } ], highlight: { title: 'Share caiu por deflação de valor e volume de vendas.', details: 'Mercado CFT cresceu 2% em valor, enquanto Natura perdeu 5% no comparativo.' }, analysis: { reaction: 'A queda em valor e volume veio na contramão de um crescimento de 3,3 pp na penetração nos lares.', lookout: 'Movimento de pêndulo no mercado, onde grandes marcas líderes (Kaiak, Egeo, Seda) sofreram quedas de share.' } },
+                    equity: { key: 'equity', title: 'Recall & Equity', source: 'SYSTEM1 / YOUGOV', description: 'Como a força e percepção da marca tem evoluído (Intenção de Compra).', chartData: { labels: ['Intent','Ad Aware','Qualidade'], data: [44.5, 20.4, 64.0]}, mainValue: '44.5%', mainLabel: 'Intenção de Compra', mainChange: '+1.4 p.p. vs Q2 24', quarterly: [ { quarter: 'Q1', value: '43.1%', change: '+0.9 p.p', insight: 'Crescimento sólido na consideração da marca.' }, { quarter: 'Q2', value: '44.5%', change: '+1.4 p.p', insight: 'Impacto positivo das campanhas de Dia das Mães.' }, { quarter: 'Q3', value: 'N/A', change: '', insight: 'Aguardando novos dados de Brand Index.', isCurrent: true } ], pillars: [ { name: 'Purchase Intent', value: '44.5%', change: '+1.4 p.p', subtext: '' }, { name: 'Ad Awareness', value: '20.4%', change: '+0.8 p.p', subtext: '' }, { name: 'Qualidade', value: '64.0%', change: '-2.5 p.p', subtext: 'Ponto de Atenção' } ], highlight: { title: 'Marca teve impacto sólido em lembrança e intenção.', details: 'Índices de topo de funil cresceram, mas percepção de qualidade caiu.' }, analysis: { reaction: 'As campanhas estão sendo notadas e traduzidas em intenção de compra, o que é positivo para o resultado futuro.', lookout: 'A queda na percepção de Qualidade (-2.5 p.p.) e Valor (-1.8 p.p.) são os principais pontos de atenção e precisam ser investigados.' } }
+                }
+            },
+            avon: {
+                brandColor: '#111827',
+                summaryDesc: 'Diagnóstico da saúde do negócio Avon, combinando performance operacional com impacto nos resultados de mercado.',
+                kpiCards: [
+                    { title: 'Receita Líquida', value: 'R$ 2,1 BI', change: "+0,5%", changeColor: 'text-green-500', frequency: 'Trimestral', history: [{period: 'Q4 24', value: '2.4 BI'}, {period: 'Q1 25', value: '2.0 BI'}] },
+                    { title: 'Market Share', value: '8,2%', change: "+0,1 p.p.", changeColor: 'text-green-500', frequency: 'Trimestral', history: [{period: 'H2 24', value: '8.0%'}, {period: 'H1 25', value: '8.1%'}] },
+                    { title: 'Share of Investment', value: '3,1%', change: "+0,5 p.p.", changeColor: 'text-green-500', frequency: 'Mensal', history: [{period: 'Mai', value: '2.8%'}, {period: 'Jun', value: '3.0%'}, {period: 'Jul', value: '3.8%'}] },
+                    { title: 'Purchase Intent', value: '35,7%', change: "+0,5 p.p.", changeColor: 'text-green-500', frequency: 'Mensal', history: [{period: 'Mai', value: '35.2%'}, {period: 'Jun', value: '35.0%'}, {period: 'Jul', value: '35.7%'}] }
+                ],
+                summaryHighlights: [
+                    { title: 'Balanço Q2 2025', icon: 'fa-building', summary: 'Avon apresenta crescimento modesto na receita, com margens estáveis e foco em otimização de portfólio na América Latina.', metrics: [ { label: 'Lucro', value: 'R$ 80 MM (+15%)', type: 'positive' }, { label: 'EBITDA', value: 'R$ 350 MM (+2,0%)', type: 'positive' }, { label: 'Receita', value: 'R$ 2,1 BI (+0,5%)', type: 'positive' } ] },
+                    { title: 'YouGov Brand Index', icon: 'fa-star', summary: 'Crescimento em lembrança de marca impulsiona leve alta na intenção de compra, mas percepção de valor continua sendo um desafio.', metrics: [ { label: 'Purchase Intent', value: '35,7% (+0,5 p.p)', type: 'positive' }, { label: 'Ad Awareness', value: '15,1% (+1,1 p.p)', type: 'positive' }, { label: 'Percepção Valor', value: '42,1% (-0,5 p.p)', type: 'negative' }, { label: 'Qualidade', value: '55,2% (-0,8 p.p)', type: 'negative' } ] }
+                ],
+                revenueTrend: { labels: ['Ago', 'Set', 'Out', 'Nov', 'Dez', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul'], data: [2.0, 2.1, 2.0, 2.2, 2.4, 2.1, 2.0, 2.1, 2.2, 2.1, 2.0, 2.1] },
+                monthlyData: [
+                    { month: 'Maio', investment: { highlight: 'Investimento focado em Make e Skincare para o Dia das Mães.', brasil: { total: 'R$ 25.0 MM', percentage: '12,0 %', progress: '12.0%', balance: 'R$ 183.0 MM' }, hispana: { total: 'R$ xx MM', percentage: 'X,X %', progress: '25%', balance: 'R$ X.X MM' }}, precisionOverview: { totalInvest: 'R$ 25,0 MM', onlinePercent: '58%', onlineValue: 'R$ 14,5 MM', offlinePercent: '42%', offlineValue: 'R$ 10,5 MM', pmPercent: '15%', pmValue: 'R$ 2,2 MM', nonPmValue: 'R$ 12,3 MM', insight: 'Primeiros testes com audiências de Precision em campanhas sazonais.'}, campaigns: { brasil: [{ name: 'Dia das Mães', desc: 'Campanha com foco em kits e presentes, gerando bom volume de vendas.', kpiValue: '3.9', kpiLabel: 'ROAS' }], hispana: []}, mmmRoas: { data: [2.1, 3.9, 1.6, 3.0] }, governance: { goldenRules: 80, score: 3.0, rentabilityValue: 'R$ 0,6 MM', rentabilityPercent: '9,5% do investimento'} },
+                    { month: 'Junho', investment: { highlight: 'Mês de transição com planejamento para a campanha Power Day.', brasil: { total: 'R$ 28.1 MM', percentage: '15,2 %', progress: '15.2%', balance: 'R$ 156.9 MM' }, hispana: { total: 'R$ xx MM', percentage: 'X,X %', progress: '25%', balance: 'R$ X.X MM' }}, precisionOverview: { totalInvest: 'R$ 28,1 MM', onlinePercent: '55%', onlineValue: 'R$ 15,5 MM', offlinePercent: '45%', offlineValue: 'R$ 12,6 MM', pmPercent: '16%', pmValue: 'R$ 2,5 MM', nonPmValue: 'R$ 13,0 MM', insight: 'Estruturação da base de audiências para a implementação de Precision.'}, campaigns: { brasil: [{ name: 'Renew [Skincare]', desc: 'Campanha de sustentação com foco em audiências de alto valor.', kpiValue: '3.1', kpiLabel: 'Score' }], hispana: []}, mmmRoas: { data: [2.0, 3.8, 1.5, 2.9] }, governance: { goldenRules: 81, score: 3.1, rentabilityValue: 'R$ 0,7 MM', rentabilityPercent: '10,2% do investimento'} },
+                    { month: 'Julho', investment: { highlight: 'Investimento em Avon focado na implementação de Precision a partir da campanha de Power Day em Julho.', brasil: { total: 'R$ 31.7 MM', percentage: '17,0 %', progress: '17.0%', balance: 'R$ 26.4 MM' }, hispana: { total: 'R$ xx MM', percentage: 'X,X %', progress: '25%', balance: 'R$ X.X MM' }}, precisionOverview: { totalInvest: 'R$ 31,7 milhões', onlinePercent: '59%', onlineValue: 'R$ 18,6 MM', offlinePercent: '41%', offlineValue: 'R$ 13,1 MM', pmPercent: '17%', pmValue: 'R$ 3,2 MM', nonPmValue: 'R$ 15,3 MM', insight: 'A implementação de Precision aconteceu a partir da campanha de Power Day. Considerando apenas as campanhas posteriores, PM representa 53%.'}, campaigns: { brasil: [ { name: 'Power Stay [Make]', desc: 'Primeira grande campanha com implementação de Precision Marketing.', kpiValue: '53%', kpiLabel: 'Precision' }, { name: 'Renew [Skincare]', desc: 'Foco em audiências de alto valor para reforçar liderança.', kpiValue: '4.1', kpiLabel: 'ROAS' }, { name: 'Black Essential [Perfume]', desc: 'Campanha com forte apelo em mídia digital e performance.', kpiValue: 'XX.X', kpiLabel: 'KPI' } ], hispana: [ { name: 'Campanha Avon 1 [LATAM]', desc: 'Descrição do insight da campanha Hispana.', kpiValue: 'XX.X', kpiLabel: 'KPI' } ]}, mmmRoas: { data: [1.9, 3.8, 1.5, 2.9] }, governance: { goldenRules: 82, score: 3.15, rentabilityValue: 'R$ 0,8 MM', rentabilityPercent: '11,5% do investimento' } }
+                ],
+                marketPerformance: {
+                    soi: { key: 'soi', title: 'Share of Investment vs. Voice', source: 'KANTAR IBOPE MEDIA', description: 'Análise da pressão competitiva e eficiência do investimento.', chartData: { labels: ['Q1','Q2','Q3 (Jul)'], data: [2.5, 3.2, 3.8]}, mainValue: '3.1%', mainLabel: 'YTD', mainChange: '+0.5 p.p vs 24', quarterly: [ { quarter: 'Q1', value: '2.5%', change: '+0.8 p.p', insight: 'Aumento de investimento para suportar lançamentos.' }, { quarter: 'Q2', value: '3.2%', change: '+0.4 p.p', insight: 'Manutenção de pressão de mídia em período competitivo.' }, { quarter: 'Q3 (Jul)', value: '3.8%', change: '+0.2 p.p', insight: 'Pico de investimento alinhado com a campanha Power Day.', isCurrent: true } ], pillars: [ { name: 'Maquiagem', value: '15.2%', change: '+3.1 p.p', subtext: 'SOI YTD 14.8%' }, { name: 'Rosto', value: '8.9%', change: '+1.3 p.p', subtext: 'SOI YTD 7.5%' }, { name: 'Perfumaria', value: '4.1%', change: '-0.5 p.p', subtext: 'SOI YTD 4.5%' } ], highlight: { title: 'Foco de investimento em Maquiagem impulsionou o crescimento do SOI.', details: 'Power Stay foi a campanha com maior alocação de verba.' }, analysis: { reaction: 'Aumento de investimento está alinhado com a estratégia de fortalecimento das categorias core da marca.', lookout: 'Concorrência em maquiagem está cada vez mais pulverizada, exigindo um investimento constante para manter a visibilidade.' }, soiSov: { x: [12], y: [15] } },
+                     roas: { key: 'roas', title: 'ROAS', source: 'MEDIA HERO', description: 'Quanto os esforços de mídia estão retornando em vendas.', chartData: { labels: ['Q1','Q2'], data: [3.1, 3.3]}, mainValue: '3.2', mainLabel: 'H1', mainChange: '+0.1 vs H1 24', quarterly: [ { quarter: 'Q1', value: '3.1', change: '+0.1', insight: 'Retorno estável com mix de mídia tradicional.' }, { quarter: 'Q2', value: '3.3', change: '+0.1', insight: 'Leve melhora com otimizações em campanhas digitais.' }, { quarter: 'Q3', value: 'N/A', change: '', insight: 'Aguardando impacto da implementação de Precision.', isCurrent: true } ], pillars: [ { name: 'Mídia Digital', value: '3.8', change: '', subtext: 'Principal driver' }, { name: 'TV Aberta', value: '1.9', change: '', subtext: 'Alcance e branding' }, { name: 'Influencers', value: '2.9', change: '', subtext: 'Engajamento' } ], highlight: { title: 'Mídia Digital continua sendo o canal de maior eficiência.', details: 'Iniciativas de Precision devem acelerar ainda mais esse número.' }, analysis: { reaction: 'O ROAS geral se mantém positivo, mas com baixo crescimento, indicando espaço para otimização.', lookout: 'O principal desafio é aumentar o retorno dos investimentos em TV, que atualmente pesam na média geral do ROAS.' } },
+                    marketShare: { key: 'marketShare', title: 'Market Share', source: 'KANTAR WORLDPANEL', description: 'Nossa captação de vendas em valor dentro do mercado total de CFT.', chartData: { labels: ['H1 2024', 'H1 2025'], data: [8.1, 8.2]}, mainValue: '8.2%', mainLabel: 'H1', mainChange: '+0.1% pp vs H1 24', quarterly: [ { quarter: 'Q1', value: '8.1%', change: '0.0 pp', insight: 'Manutenção de share em um trimestre estável.' }, { quarter: 'Q2', value: '8.2%', change: '+0.1 pp', insight: 'Leve ganho de share impulsionado por maquiagem.' }, { quarter: 'Q3', value: 'N/A', change: '', insight: 'Aguardando fechamento do trimestre.', isCurrent: true } ], pillars: [ { name: 'Maquiagem', value: '19.5%', change: '+0.5 pp', subtext: '' }, { name: 'Rosto', value: '12.1%', change: '0.0 pp', subtext: '' }, { name: 'Corpo', value: '5.5%', change: '-0.2 pp', subtext: '' } ], highlight: { title: 'Crescimento em Maquiagem foi o principal responsável pelo ganho de share.', details: 'A categoria de Corpo apresentou leve retração.' }, analysis: { reaction: 'O ganho de share, mesmo que modesto, é positivo e indica que a estratégia de foco nas categorias core está funcionando.', lookout: 'A dependência da categoria de Maquiagem para o crescimento do share total é um ponto de atenção. É preciso fortalecer as outras categorias.' } },
+                    equity: { key: 'equity', title: 'Recall & Equity', source: 'SYSTEM1 / YOUGOV', description: 'Como a força e percepção da marca tem evoluído (Intenção de Compra).', chartData: { labels: ['Intent','Ad Aware','Qualidade'], data: [35.7, 15.1, 55.2]}, mainValue: '35.7%', mainLabel: 'Intenção de Compra', mainChange: '+0.5 p.p. vs Q2 24', quarterly: [ { quarter: 'Q1', value: '35.2%', change: '+0.2 p.p', insight: 'Crescimento tímido, mas constante.' }, { quarter: 'Q2', value: '35.7%', change: '+0.5 p.p', insight: 'Melhora na consideração com novas campanhas.' }, { quarter: 'Q3', value: 'N/A', change: '', insight: 'Aguardando novos dados de Brand Index.', isCurrent: true } ], pillars: [ { name: 'Purchase Intent', value: '35.7%', change: '+0.5 p.p', subtext: '' }, { name: 'Ad Awareness', value: '15.1%', change: '+1.1 p.p', subtext: '' }, { name: 'Qualidade', value: '55.2%', change: '-0.8 p.p', subtext: 'Ponto de Atenção' } ], highlight: { title: 'Ad Awareness (lembrança de propaganda) foi o indicador que mais cresceu.', details: 'Isso se refletiu em um aumento modesto da Intenção de Compra.' }, analysis: { reaction: 'O aumento do investimento em mídia está se traduzindo em maior lembrança da marca pelo consumidor.', lookout: 'Assim como em Natura, a percepção de Qualidade apresenta uma leve queda, indicando uma possível tendência de mercado ou um ponto a ser trabalhado na comunicação.' } }
+                }
+            }
+        };
+
+        const chartInstances = { marketGrid: {} };
+        const naturaOmniPalette = { corporateBlue: '#0055A0', gray: '#E5E7EB', text: '#374151' };
+        let currentMonthIndex = 2; 
+
+        // --- CHART CREATION HELPERS ---
+        function createGaugeChart(ctx, value, maxValue, color, yOffset) {
+            if (!ctx) return null;
+            const percentage = (value / maxValue) * 100;
+            const displayText = maxValue === 5 ? value.toFixed(1).replace('.', ',') : `${value.toFixed(0)}%`;
+            return new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [percentage, 100 - percentage], backgroundColor: [color, naturaOmniPalette.gray], borderColor: '#ffffff', borderWidth: 2, circumference: 180, rotation: 270 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false }, title: { display: true, text: displayText, position: 'bottom', y: yOffset, font: { family: 'Inter', size: 22, weight: 'bold' }, color: naturaOmniPalette.text } }, cutout: '80%' } });
+        }
+        
+        // --- UPDATE LOGIC ---
+        function updateDashboard(brand, monthIndex = dashboardData[brand].monthlyData.length - 1) {
+            currentMonthIndex = monthIndex;
+            const data = dashboardData[brand];
+            const otherBrand = brand === 'natura' ? 'avon' : 'natura';
+            const otherBrandData = dashboardData[otherBrand];
+            const monthly = data.monthlyData[currentMonthIndex];
+            
+            const naturaBtn = document.getElementById('natura-btn');
+            const avonBtn = document.getElementById('avon-btn');
+            if (brand === 'natura') {
+                naturaBtn.classList.add('selected');
+                naturaBtn.style.borderColor = data.brandColor;
+                avonBtn.classList.remove('selected');
+                avonBtn.style.borderColor = 'transparent';
+            } else {
+                avonBtn.classList.add('selected');
+                avonBtn.style.borderColor = data.brandColor;
+                naturaBtn.classList.remove('selected');
+                naturaBtn.style.borderColor = 'transparent';
+            }
+            
+            document.querySelectorAll('.tab-button.active').forEach(tab => {
+                tab.style.borderColor = data.brandColor;
+                tab.style.color = data.brandColor;
+            });
+
+            document.querySelectorAll('.dynamic-bg-hover').forEach(el => {
+                el.style.backgroundColor = `${data.brandColor}20`;
+                el.style.color = data.brandColor;
+            });
+
+            // --- Tab 1: Summary ---
+            document.getElementById('summary-desc').innerText = data.summaryDesc;
+            const kpiContainer = document.getElementById('kpi-cards-container');
+            kpiContainer.innerHTML = data.kpiCards.map((kpi) => `<div class="kpi-card bg-white p-4 rounded-lg shadow-md border-l-4 relative" style="border-color: ${data.brandColor};"><span class="absolute top-2 right-2 text-xs bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-full">${kpi.frequency}</span><h4 class="text-sm font-semibold text-gray-500">${kpi.title}</h4><div><p class="text-3xl font-bold text-gray-800">${kpi.value}</p><p class="text-sm font-semibold ${kpi.changeColor}">${kpi.change}</p></div><div class="mt-4 space-y-2">${kpi.history.map(h => `<div class="flex justify-between items-center text-xs bg-gray-50 p-1 rounded"><span class="font-semibold text-gray-500">${h.period}</span><span class="font-bold text-gray-700">${h.value}</span></div>`).join('')}</div></div>`).join('');
+            
+            document.getElementById('summary-highlights-container').innerHTML = data.summaryHighlights.map(card => `<div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-lg font-bold text-gray-800 flex items-center"><i class="fas ${card.icon} mr-3 text-gray-400"></i>${card.title}</h3><p class="text-sm text-gray-600 my-3">${card.summary}</p><div class="space-y-2 border-t pt-3">${card.metrics.map(m => `<div class="flex items-center text-sm"><i class="fas ${m.type === 'positive' ? 'fa-arrow-trend-up text-green-500' : 'fa-arrow-trend-down text-red-500'} w-5"></i><span class="font-semibold">${m.label}:</span><span class="ml-1 text-gray-600">${m.value}</span></div>`).join('')}</div></div>`).join('');
+
+            chartInstances.revenue.data.labels = data.revenueTrend.labels;
+            chartInstances.revenue.data.datasets[0].data = data.revenueTrend.data;
+            chartInstances.revenue.data.datasets[0].borderColor = data.brandColor;
+            chartInstances.revenue.data.datasets[0].backgroundColor = `${data.brandColor}33`;
+            chartInstances.revenue.update();
+            
+            // --- Tab 2: Media ---
+            document.getElementById('current-month-display').innerText = monthly.month + ' 2025';
+            document.getElementById('prev-month-btn').disabled = (currentMonthIndex === 0);
+            document.getElementById('next-month-btn').disabled = (currentMonthIndex === data.monthlyData.length - 1);
+            
+            document.getElementById('investment-highlight').innerText = monthly.investment.highlight;
+            document.getElementById('investment-container').innerHTML = `<div class="grid grid-cols-12 gap-4 items-center"><div class="col-span-12 sm:col-span-2 font-semibold text-gray-700">Brasil</div><div class="col-span-6 sm:col-span-2 text-gray-800 font-bold">${monthly.investment.brasil.total}</div><div class="col-span-12 sm:col-span-4 order-last sm:order-none"><div class="h-4 bg-gray-200 rounded-full"><div class="h-4 rounded-full" style="width: ${monthly.investment.brasil.progress}; background-color: ${data.brandColor};"></div></div></div><div class="col-span-6 sm:col-span-2 text-center font-semibold">${monthly.investment.brasil.percentage}</div><div class="col-span-12 sm:col-span-2 text-right text-gray-600">Saldo: ${monthly.investment.brasil.balance}</div></div><div class="grid grid-cols-12 gap-4 items-center"><div class="col-span-12 sm:col-span-2 font-semibold text-gray-700">Hispana</div><div class="col-span-6 sm:col-span-2 text-gray-800 font-bold">${monthly.investment.hispana.total}</div><div class="col-span-12 sm:col-span-4 order-last sm:order-none"><div class="h-4 bg-gray-200 rounded-full"><div class="h-4 bg-gray-400 rounded-full" style="width: ${monthly.investment.hispana.progress};"></div></div></div><div class="col-span-6 sm:col-span-2 text-center font-semibold">${monthly.investment.hispana.percentage}</div><div class="col-span-12 sm:col-span-2 text-right text-gray-600">Saldo: ${monthly.investment.hispana.balance}</div></div>`;
+            document.getElementById('precision-overview-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4">Overview Precision</h3><div class="grid grid-cols-1 lg:grid-cols-2 gap-8">${[data.monthlyData[currentMonthIndex], otherBrandData.monthlyData[currentMonthIndex]].map((d, i) => `<div class="flex flex-col items-center"><img src="${i === 0 ? (brand === 'natura' ? 'https://images.seeklogo.com/logo-png/45/2/natura-logo-png_seeklogo-451985.png' : 'https://images.seeklogo.com/logo-png/39/2/avon-new-2021-logo-png_seeklogo-397345.png') : (brand === 'natura' ? 'https://images.seeklogo.com/logo-png/39/2/avon-new-2021-logo-png_seeklogo-397345.png' : 'https://images.seeklogo.com/logo-png/45/2/natura-logo-png_seeklogo-451985.png')}" class="h-8 mb-4 ${i === 0 ? '' : 'opacity-50 grayscale'}"><div class="w-full text-center bg-gray-800 text-white font-bold py-3 rounded-full text-lg">${d.precisionOverview.totalInvest}</div><div class="w-1/2 border-l-2 border-gray-300 h-6"></div><div class="w-full flex justify-center gap-4"><div class="w-1/2 border-2 border-gray-300 rounded-full p-3 text-center"><p class="text-xs text-gray-500">${d.precisionOverview.onlinePercent} Online</p><p class="font-bold">${d.precisionOverview.onlineValue}</p></div><div class="w-1/2 border-2 border-gray-300 rounded-full p-3 text-center"><p class="text-xs text-gray-500">${d.precisionOverview.offlinePercent} Offline</p><p class="font-bold">${d.precisionOverview.offlineValue}</p></div></div><div class="w-1/4 border-l-2 border-gray-300 h-6"></div><div class="w-1/2 flex justify-center gap-4"><div class="w-full border-2 rounded-full p-3 text-center" style="border-color: ${i === 0 ? dashboardData[brand].brandColor : '#d1d5db'}"><p class="text-xs text-gray-500">${d.precisionOverview.pmPercent} PM</p><p class="font-bold">${d.precisionOverview.pmValue}</p></div><div class="w-full border-2 border-gray-300 rounded-full p-3 text-center"><p class="font-bold text-gray-400">${d.precisionOverview.nonPmValue}</p></div></div><div class="mt-4 p-4 rounded-lg text-sm text-center" style="background-color: ${i === 0 ? `${dashboardData[brand].brandColor}20` : '#f3f4f6'}">${d.precisionOverview.insight}</div></div>`).join('')}</div>`;
+            document.getElementById('campaign-title').innerText = `Diagnóstico por Campanha (${monthly.month})`;
+            document.getElementById('campaigns-brasil').innerHTML = `<h4 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Brasil</h4><div class="grid grid-cols-1 md:grid-cols-3 gap-6">${monthly.campaigns.brasil.map(c => `<div class="campaign-card bg-gray-50 p-4 rounded-lg"><h4 class="font-bold text-gray-800">${c.name}</h4><p class="text-sm text-gray-600 mt-2 min-h-[60px]">${c.desc}</p><p class="text-4xl font-bold text-right mt-4" style="color: ${data.brandColor};">${c.kpiValue} <span class="text-lg font-semibold text-gray-500">${c.kpiLabel}</span></p></div>`).join('')}</div>`;
+            document.getElementById('campaigns-hispana').innerHTML = monthly.campaigns.hispana.length > 0 ? `<h4 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Hispana</h4><div class="grid grid-cols-1 md:grid-cols-3 gap-6">${monthly.campaigns.hispana.map(c => `<div class="campaign-card bg-gray-50 p-4 rounded-lg"><h4 class="font-bold text-gray-800">${c.name}</h4><p class="text-sm text-gray-600 mt-2 min-h-[60px]">${c.desc}</p><p class="text-4xl font-bold text-gray-500 text-right mt-4">${c.kpiValue} <span class="text-lg font-semibold text-gray-400">${c.kpiLabel}</span></p></div>`).join('')}</div>` : '';
+
+            chartInstances.mmmRoas.data.datasets[0].data = monthly.mmmRoas.data;
+            chartInstances.mmmRoas.data.datasets[0].backgroundColor[1] = data.brandColor;
+            chartInstances.mmmRoas.update();
+            
+            document.getElementById('governance-card').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4">Governança & Eficiência</h3><div class="grid grid-cols-2 gap-4"><div class="text-center"><div class="chart-container !h-40"><canvas id="goldenRulesChart"></canvas></div><p class="text-sm font-semibold mt-2">Compliance Golden Rules</p></div><div class="text-center"><div class="chart-container !h-40"><canvas id="scoreChart"></canvas></div><p class="text-sm font-semibold mt-2">Score Médio</p></div></div>${monthly.governance.rentabilityValue ? `<div class="mt-4 pt-4 border-t"><h4 class="text-sm font-semibold text-gray-500">Rentabilidade</h4><p class="text-2xl font-bold text-gray-800 mt-1">${monthly.governance.rentabilityValue}</p><p class="text-sm text-green-500 font-semibold">${monthly.governance.rentabilityPercent}</p></div>` : ''}`;
+            
+            if(chartInstances.goldenRules) chartInstances.goldenRules.destroy();
+            chartInstances.goldenRules = createGaugeChart(document.getElementById('goldenRulesChart')?.getContext('2d'), monthly.governance.goldenRules, 100, data.brandColor, -45);
+            
+            if(chartInstances.score) chartInstances.score.destroy();
+            if (monthly.governance.score !== null) chartInstances.score = createGaugeChart(document.getElementById('scoreChart')?.getContext('2d'), monthly.governance.score, 5, naturaOmniPalette.corporateBlue, -55);
+            
+            // --- Tab 3: Market Performance Grid Update ---
+            hideMetricDetail(); 
+            Object.keys(data.marketPerformance).forEach(key => {
+                const metric = data.marketPerformance[key];
+                document.getElementById(`${key}-title`).innerText = metric.title;
+                document.getElementById(`${key}-source`).innerText = metric.source;
+                document.getElementById(`${key}-desc`).innerText = metric.description;
+                
+                if (key === 'soi') {
+                    Plotly.react('soi-summary-chart', [{ x: metric.soiSov.x.concat(otherBrandData.marketPerformance.soi.soiSov.x), y: metric.soiSov.y.concat(otherBrandData.marketPerformance.soi.soiSov.y), mode: 'markers', type: 'scatter', marker: { size: [20, 15], color: [data.brandColor, otherBrandData.brandColor] } }], { xaxis: { title: 'SOI (%)' }, yaxis: { title: 'SOV (%)' }, showlegend: false, margin: { l: 50, r: 20, b: 40, t: 20 }, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: { family: 'Inter, sans-serif', color: naturaOmniPalette.text } }, {responsive: true, displayModeBar: false});
+                } else {
+                    const chart = chartInstances.marketGrid[key];
+                    chart.data.labels = metric.chartData.labels;
+                    chart.data.datasets[0].data = metric.chartData.data;
+                    if(key === 'marketShare') chart.data.datasets[0].backgroundColor = [naturaOmniPalette.gray, data.brandColor];
+                    else chart.data.datasets[0].backgroundColor = data.brandColor;
+                    chart.update();
+                }
+            });
+        }
+        
+        function showMetricDetail(metricKey) {
+            const currentBrand = document.getElementById('natura-btn').classList.contains('selected') ? 'natura' : 'avon';
+            const data = dashboardData[currentBrand];
+            const metric = data.marketPerformance[metricKey];
+            const brandName = currentBrand.charAt(0).toUpperCase() + currentBrand.slice(1);
+            const competitorData = { soiSov: { x: [15, 10, 8], y: [14, 8, 7], text: ['O Boticário', 'L\'Oréal', 'Unilever'] } };
+
+            document.getElementById('market-grid-view').classList.add('hidden');
+            document.getElementById('market-intro').classList.add('hidden');
+            const detailContainer = document.getElementById('market-detail-view');
+            detailContainer.classList.remove('hidden');
+
+             detailContainer.innerHTML = `<button onclick="hideMetricDetail()" class="mb-4 font-semibold text-gray-600 hover:text-gray-900"><i class="fas fa-arrow-left mr-2"></i>Voltar para a visão geral</button><div class="bg-white p-6 rounded-lg shadow-md"><div class="flex justify-between items-start"><h3 class="text-2xl font-bold text-gray-800">${metric.title}</h3><span class="text-xs font-semibold bg-gray-100 text-gray-600 px-2 py-1 rounded-full">${metric.source}</span></div><div class="grid grid-cols-1 md:grid-cols-12 gap-8 mt-4"><div class="md:col-span-3 border-r pr-6"><p class="text-6xl font-black" style="color:${data.brandColor};">${metric.mainValue}</p><p class="font-semibold text-gray-500 text-lg">${metric.mainLabel} (${metric.mainChange})</p><div class="mt-6 space-y-4"><h4 class="font-bold text-gray-700 text-lg">Pilares de Marca (Jul)</h4>${metric.pillars.map(p => `<div><div class="flex justify-between items-baseline"><p class="font-semibold">${p.name}</p><p class="font-bold text-xl" style="color:${data.brandColor};">${p.value}</p></div><p class="text-sm text-gray-500">${p.change} vs 24 ${p.subtext ? `(${p.subtext})` : ''}</p></div>`).join('')}</div></div><div class="md:col-span-9"><h4 class="font-bold text-gray-700 mb-4 text-lg">Evolução Trimestral</h4><div class="grid grid-cols-1 sm:grid-cols-3 gap-4">${metric.quarterly.map(q => `<div class="bg-gray-50 p-4 rounded-lg transition-all ${q.isCurrent ? 'quarter-highlight' : ''}" style="border-color:${data.brandColor};"><p class="font-bold text-xl">${q.quarter}</p><p class="text-3xl font-bold" style="color:${data.brandColor};">${q.value}</p><p class="text-sm font-semibold text-gray-500">${q.change} vs 24</p><p class="text-sm text-gray-500 mt-2">${q.insight}</p></div>`).join('')}</div><div class="mt-6 p-4 rounded-lg" style="background-color: ${data.brandColor}20;"><h4 class="font-bold text-xl text-gray-800">${metric.highlight.title}</h4><p class="mt-1">${metric.highlight.details}</p></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div><h4 class="font-bold text-gray-700 mb-2 text-lg"><i class="fas fa-sync-alt mr-2"></i>Ação & Reação</h4><p class="text-gray-600">${metric.analysis.reaction}</p></div><div><h4 class="font-bold text-gray-700 mb-2 text-lg"><i class="fas fa-umbrella mr-2"></i>Lookout</h4><p class="text-gray-600">${metric.analysis.lookout}</p></div></div></div></div></div>`;
+
+            if (metric.key === 'soi') {
+                 detailContainer.querySelector('.md\\:col-span-3').insertAdjacentHTML('beforeend', '<div id="soiSovDetailChart" class="w-full h-[320px] mt-4"></div>');
+                 Plotly.newPlot('soiSovDetailChart', [{ x: metric.soiSov.x.concat(competitorData.soiSov.x), y: metric.soiSov.y.concat(competitorData.soiSov.y), mode: 'markers+text', type: 'scatter', text: [brandName].concat(competitorData.soiSov.text), textposition: 'top center', marker: { size: [30, 25, 18, 16], color: [data.brandColor, naturaOmniPalette.gray, naturaOmniPalette.gray, naturaOmniPalette.gray] } }], { xaxis: { title: 'Share of Investment (%)' }, yaxis: { title: 'Share of Voice (%)' }, showlegend: false, margin: { l: 50, r: 60, b: 50, t: 20 }, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: { family: 'Inter, sans-serif', color: naturaOmniPalette.text } }, {responsive: true, displayModeBar: false});
+            }
+        }
+
+        function hideMetricDetail() {
+            document.getElementById('market-grid-view').classList.remove('hidden');
+            document.getElementById('market-intro').classList.remove('hidden');
+            document.getElementById('market-detail-view').classList.add('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const naturaBtn = document.getElementById('natura-btn');
+            const avonBtn = document.getElementById('avon-btn');
+            const tabs = document.querySelectorAll('.tab-button');
+            const panes = document.querySelectorAll('.tab-pane');
+            const naturaOmniPalette = { corporateBlue: '#0055A0', gray: '#E5E7EB', text: '#374151' };
+            
+            tabs[0].classList.add('active'); 
+
+            chartInstances.revenue = new Chart(document.getElementById('revenueTrendChart').getContext('2d'), { type: 'line', data: { labels: [], datasets: [{ data: [], fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false, ticks: { color: naturaOmniPalette.text } }, x: { ticks: { color: naturaOmniPalette.text } } }, plugins: { legend: { display: false } } } });
+            chartInstances.mmmRoas = new Chart(document.getElementById('mmmRoasChart').getContext('2d'), { type: 'bar', data: { labels: ['TV Aberta', 'Mídia Digital', 'OOH', 'Influenciadores'], datasets: [{ data: [] }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { color: naturaOmniPalette.text } }, x: { ticks: { color: naturaOmniPalette.text } } }, plugins: { legend: { display: false } } } });
+            
+            chartInstances.marketGrid.roas = new Chart(document.getElementById('roas-summary-chart').getContext('2d'), { type: 'bar', data: { labels: [], datasets: [{ label: 'ROAS', data: [] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+            chartInstances.marketGrid.marketShare = new Chart(document.getElementById('marketShare-summary-chart').getContext('2d'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Market Share (%)', data: [] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+            chartInstances.marketGrid.equity = new Chart(document.getElementById('equity-summary-chart').getContext('2d'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Valor (%)', data: [] }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+
+            const prevMonthBtn = document.getElementById('prev-month-btn');
+            const nextMonthBtn = document.getElementById('next-month-btn');
+
+            prevMonthBtn.addEventListener('click', () => {
+                if(currentMonthIndex > 0) {
+                    currentMonthIndex--;
+                    updateDashboard(naturaBtn.classList.contains('selected') ? 'natura' : 'avon', currentMonthIndex);
+                }
+            });
+
+            nextMonthBtn.addEventListener('click', () => {
+                const brand = naturaBtn.classList.contains('selected') ? 'natura' : 'avon';
+                if(currentMonthIndex < dashboardData[brand].monthlyData.length - 1) {
+                    currentMonthIndex++;
+                    updateDashboard(brand, currentMonthIndex);
+                }
+            });
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const currentBrand = naturaBtn.classList.contains('selected') ? 'natura' : 'avon';
+                    tabs.forEach(item => { item.classList.remove('active'); item.style.color = '#6b7280'; item.style.borderColor = 'transparent'; });
+                    this.classList.add('active');
+                    this.style.color = dashboardData[currentBrand].brandColor;
+                    this.style.borderColor = dashboardData[currentBrand].brandColor;
+                    panes.forEach(pane => pane.classList.add('hidden'));
+                    document.getElementById(this.dataset.tab).classList.remove('hidden');
+                    
+                    if(this.dataset.tab === 'tab3') {
+                        hideMetricDetail();
+                        setTimeout(() => {
+                            const soiChart = document.getElementById('soi-summary-chart');
+                            if (soiChart) Plotly.Plots.resize(soiChart);
+                        }, 50);
+                    }
+                });
+            });
+
+            naturaBtn.addEventListener('click', () => {
+                updateDashboard('natura');
+            });
+            avonBtn.addEventListener('click', () => {
+                updateDashboard('avon');
+            });
+
+            updateDashboard('natura');
+        });
+    </script>
+</body>
+</html>
