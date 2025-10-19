@@ -167,7 +167,7 @@
         // --- DATA STORE ---
         const dashboardData = {
             natura: {
-                brandColor: '#F47920',
+                brandColor: '#0055A0', // COR ALTERADA
                 summaryDesc: 'Diagnóstico da saúde do negócio Natura, combinando performance operacional com impacto nos resultados de mercado.',
                 kpiCards: [
                     { title: 'Receita Líquida', value: 'R$ 5,7 BI', change: "-1,7%", changeColor: 'text-red-500', frequency: 'Trimestral', history: [{period: 'Q4 24', value: '6.5 BI'}, {period: 'Q1 25', value: '5.8 BI'}] },
@@ -193,7 +193,7 @@
                 }
             },
             avon: {
-                brandColor: '#111827',
+                brandColor: '#003366', // COR ALTERADA
                 summaryDesc: 'Diagnóstico da saúde do negócio Avon, combinando performance operacional com impacto nos resultados de mercado.',
                 kpiCards: [
                     { title: 'Receita Líquida', value: 'R$ 2,1 BI', change: "+0,5%", changeColor: 'text-green-500', frequency: 'Trimestral', history: [{period: 'Q4 24', value: '2.4 BI'}, {period: 'Q1 25', value: '2.0 BI'}] },
@@ -299,7 +299,7 @@
             chartInstances.goldenRules = createGaugeChart(document.getElementById('goldenRulesChart')?.getContext('2d'), monthly.governance.goldenRules, 100, data.brandColor, -45);
             
             if(chartInstances.score) chartInstances.score.destroy();
-            if (monthly.governance.score !== null) chartInstances.score = createGaugeChart(document.getElementById('scoreChart')?.getContext('2d'), monthly.governance.score, 5, naturaOmniPalette.corporateBlue, -55);
+            if (monthly.governance.score !== null) chartInstances.score = createGaugeChart(document.getElementById('scoreChart')?.getContext('2d'), monthly.governance.score, 5, data.brandColor, -55);
             
             // --- Tab 3: Market Performance Grid Update ---
             hideMetricDetail(); 
